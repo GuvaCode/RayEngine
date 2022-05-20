@@ -8,7 +8,7 @@ unit RayEngine;
 interface
 
 uses
-  reDescriptor, reApplication, LazarusPackageIntf;
+  reDescriptor, reApplication, reGui, LazarusPackageIntf;
 
 implementation
 

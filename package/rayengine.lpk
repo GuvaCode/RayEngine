@@ -22,6 +22,10 @@
         <Filename Value="..\source\reapplication.pas"/>
         <UnitName Value="reApplication"/>
       </Item>
+      <Item>
+        <Filename Value="..\source\regui.pas"/>
+        <UnitName Value="regui"/>
+      </Item>
     </Files>
     <RequiredPkgs>
       <Item>
