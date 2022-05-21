@@ -8,114 +8,131 @@ uses
   raylib, raygui, classes;
 
 type
-  { TreGuiObject }
-  TreGuiObject = class(TObject)
+  { TreGuiContainer }
+  TreGuiContainer = class
   private
-    FBounds: TRectangle;
-    FFont: TFont;
+    FGlobalBounds: TRectangle;
     FVisible: boolean;
-    function GetFontSize: Longint;
-    function GetHeight: Single;
-    function GetLeft: Single;
-    function GetTop: Single;
-    function GetWidth: Single;
-    procedure SetFontSize(AValue: Longint);
-    procedure SetHeight(AValue: Single);
-    procedure SetLeft(AValue: Single);
-    procedure SetTop(AValue: Single);
+    procedure SetGlobalBounds(AValue: TRectangle);
     procedure SetVisible(AValue: boolean);
-    procedure SetWidth(AValue: Single);
+  protected
+    FGuiList: TList;
   public
     constructor Create;
     destructor Destroy; override;
     procedure Render; virtual;
     procedure Update; virtual;
-    procedure LoadFont(FileName:String);
-    procedure SetFont(Font:TFont);
-    property Bounds:TRectangle read FBounds;
-  published
-    property Top:Single read GetTop write SetTop;
-    property Left:Single read GetLeft write SetLeft;
-    property Height: Single read GetHeight write SetHeight;//Visote
-    property Width: Single read GetWidth write SetWidth;//Shirote
-    property FontSize: Longint read GetFontSize write SetFontSize;
+    property GlobalBounds:TRectangle read FGlobalBounds write SetGlobalBounds;
     property Visible: boolean read FVisible write SetVisible;
   end;
 
-  { TreForm }
+  { TreGuiObject }
+  TreGuiObject = class(TObject)
+  private
+    FOffSetBounds:TRectangle;
+    FBounds: TRectangle;
+    FUseGlobalBounds: boolean;
+    FVisible: boolean;
+    procedure SetBounds(AValue: TRectangle);
+    procedure SetUseGlobalBounds(AValue: boolean);
+    procedure SetVisible(AValue: boolean);
+  protected
+    FGuiContainer: TreGuiContainer;
+  public
+    constructor Create(GuiContainer: TreGuiContainer); virtual;
+    destructor Destroy; override;
+    procedure Render; virtual;
+    procedure Update; virtual;
+    function GetOffSetBounds(Bounds:TRectangle): TRectangle;
+    property Bounds: TRectangle read FBounds write SetBounds;
+    property Visible: boolean read FVisible write SetVisible;
+    property UseGlobalBounds: boolean read FUseGlobalBounds write SetUseGlobalBounds;
+  end;
+
+  { TreGuiForm }
   TreGuiForm = class(TreGuiObject)
   private
-    FCaption: String;
-    FMovingForm: Boolean;
-    FOnClose: TNotifyEvent;
     FClose: Boolean;
-    procedure SetCaption(AValue: String);
+    FCaption: PChar;
+    FIconIndex: longint;
+    FOnClose: TNotifyEvent;
+    FUseIcon: Boolean;
+    procedure SetCaption(AValue: PChar);
+    procedure SetIconIndex(AValue: longint);
+    procedure SetUseIcon(AValue: Boolean);
   public
-    constructor Create;
-    destructor Destroy; override;
-    procedure Render; override;
-    procedure Update; override;
-  published
-    property Caption: String read FCaption write SetCaption;
+    constructor Create(GuiContainer: TreGuiContainer);override;
+    procedure Update;override;
+    procedure Render;override;
+    property Caption: PChar read FCaption write SetCaption;
+    property UseIcon: Boolean read FUseIcon write SetUseIcon;
+    property IconIndex: longint read FIconIndex write SetIconIndex;
     property OnClose: TNotifyEvent read FOnClose write FOnClose;
   end;
 
   { TreGuiLabel }
-
   TreGuiLabel = class(TreGuiObject)
   private
-    FCaption: String;
-    procedure SetCaption(AValue: String);
+    FCaption: PChar;
+    procedure SetCaption(AValue: PChar);
   public
-    constructor Create;
-    destructor Destroy; override;
-    procedure Render; override;
-  published
-    property Caption: String read FCaption write SetCaption;
+    constructor Create(GuiContainer: TreGuiContainer);override;
+    procedure Render;override;
+    property Caption: PChar read FCaption write SetCaption;
   end;
+
 
 implementation
 
 { TreGuiLabel }
-
-procedure TreGuiLabel.SetCaption(AValue: String);
+procedure TreGuiLabel.SetCaption(AValue: PChar);
 begin
   if FCaption=AValue then Exit;
   FCaption:=AValue;
 end;
 
-constructor TreGuiLabel.Create;
+constructor TreGuiLabel.Create(GuiContainer: TreGuiContainer);
 begin
-  Caption:='Label';
+  inherited Create(GuiContainer);
+  FCaption:='GuiLabel';
   FVisible:=True;
-end;
-
-destructor TreGuiLabel.Destroy;
-begin
-  inherited Destroy;
 end;
 
 procedure TreGuiLabel.Render;
 begin
   inherited Render;
-  if FVisible then GuiLabel(Fbounds,Pchar(Caption));
+  if Fvisible then
+   begin
+     if FUseGlobalBounds then GuiLabel(GetOffSetBounds(FBounds),FCaption)
+      else GuiLabel(FBounds,FCaption);
+   end;
 end;
 
-{ TreForm }
-procedure TreGuiForm.SetCaption(AValue: String);
+{ TreGuiForm }
+procedure TreGuiForm.SetCaption(AValue: PChar);
 begin
   if FCaption=AValue then Exit;
   FCaption:=AValue;
 end;
 
-procedure TreGuiForm.Render;
+procedure TreGuiForm.SetIconIndex(AValue: longint);
 begin
-  inherited Render;
-  if FVisible then
-   begin
-     FClose:= GuiWindowBox(FBounds, PChar(FCaption));
-     if FClose and assigned(OnClose) then FOnClose(self);
-   end;
+  if FIconIndex=AValue then Exit;
+  FIconIndex:=AValue;
+end;
+
+procedure TreGuiForm.SetUseIcon(AValue: Boolean);
+begin
+  if FUseIcon=AValue then Exit;
+  FUseIcon:=AValue;
+end;
+
+constructor TreGuiForm.Create(GuiContainer: TreGuiContainer);
+begin
+  inherited Create(GuiContainer);
+  FBounds:=GuiContainer.FGlobalBounds;
+  FCaption:='GuiForm';
+  FVisible:=True;
 end;
 
 procedure TreGuiForm.Update;
@@ -123,66 +140,27 @@ begin
   inherited Update;
 end;
 
-constructor TreGuiForm.Create;
+procedure TreGuiForm.Render;
 begin
-  inherited Create;
-  FVisible:=True;
+  inherited Render;
+  if Fvisible then
+   begin
+     if FUseIcon then FClose:=GuiWindowBox(FBounds,GuiIconText(FIconIndex, FCaption))
+     else
+     FClose:= GuiWindowBox(FBounds, PChar(FCaption));
+     if FClose and assigned(OnClose) then FOnClose(self);
+   end;
 end;
 
-destructor TreGuiForm.Destroy;
+procedure TreGuiObject.SetBounds(AValue: TRectangle);
 begin
-  inherited Destroy;
+  FBounds:=AValue;
 end;
 
-{ TreGuiObject }
-function TreGuiObject.GetHeight: Single;
+procedure TreGuiObject.SetUseGlobalBounds(AValue: boolean);
 begin
- result:=FBounds.height;
-end;
-
-function TreGuiObject.GetFontSize: Longint;
-begin
-  result:=FFont.baseSize;
-end;
-
-function TreGuiObject.GetLeft: Single;
-begin
-  result:=FBounds.x;
-end;
-
-function TreGuiObject.GetTop: Single;
-begin
- result:=FBounds.y;
-end;
-
-function TreGuiObject.GetWidth: Single;
-begin
- result:=FBounds.height;
-end;
-
-procedure TreGuiObject.SetFont(Font: TFont);
-begin
-  FFont:=Font;
-end;
-
-procedure TreGuiObject.SetFontSize(AValue: Longint);
-begin
-  FFont.baseSize:=AValue;
-end;
-
-procedure TreGuiObject.SetHeight(AValue: Single);
-begin
-  FBounds:=RectangleCreate(FBounds.X,FBounds.y,FBounds.width,AValue);
-end;
-
-procedure TreGuiObject.SetLeft(AValue: Single);
-begin
-  FBounds:=RectangleCreate(AValue,FBounds.y,FBounds.width,Fbounds.height);
-end;
-
-procedure TreGuiObject.SetTop(AValue: Single);
-begin
- FBounds:=RectangleCreate(FBounds.x,AValue,FBounds.width,Fbounds.width);
+  if FUseGlobalBounds=AValue then Exit;
+  FUseGlobalBounds:=AValue;
 end;
 
 procedure TreGuiObject.SetVisible(AValue: boolean);
@@ -191,36 +169,73 @@ begin
   FVisible:=AValue;
 end;
 
-procedure TreGuiObject.SetWidth(AValue: Single);
+{ TreGuiObject }
+constructor TreGuiObject.Create(GuiContainer: TreGuiContainer);
 begin
-  FBounds:=RectangleCreate(FBounds.x,FBounds.y,AValue,Fbounds.height);
-end;
-
-constructor TreGuiObject.Create;
-begin
-  FBounds:=RectangleCreate(50,50,50,50);
-  FFont:=GetFontDefault;
+  FGuiContainer := GuiContainer;
+  FGuiContainer.FGuiList.Add(Self);
+  FOffSetBounds:=GuiContainer.FGlobalBounds;
+  FUseGlobalBounds:=True;
 end;
 
 destructor TreGuiObject.Destroy;
 begin
-  UnloadFont(FFont);
   inherited Destroy;
 end;
 
 procedure TreGuiObject.Render;
 begin
- // nothing
+//
 end;
 
 procedure TreGuiObject.Update;
 begin
-  // nothing
+// nothing
 end;
 
-procedure TreGuiObject.LoadFont(FileName: String);
+function TreGuiObject.GetOffSetBounds(Bounds: TRectangle): TRectangle;
 begin
-  FFont:=rayLib.LoadFont(Pchar(FileName));
+  result:=RectangleCreate(FOffSetBounds.x + Bounds.x,FOffSetBounds.y + Bounds.y+ 20,Bounds.width, Bounds.height);
+end;
+
+{ TreGuiContainer }
+procedure TreGuiContainer.SetGlobalBounds(AValue: TRectangle);
+begin
+  FGlobalBounds:=AValue;
+end;
+
+procedure TreGuiContainer.SetVisible(AValue: boolean);
+begin
+  if FVisible=AValue then Exit;
+  FVisible:=AValue;
+end;
+
+constructor TreGuiContainer.Create;
+begin
+  FGuiList := TList.Create;
+  FVisible := True;
+
+end;
+
+destructor TreGuiContainer.Destroy;
+var i: integer;
+begin
+  for i := 0 to FGuiList.Count- 1 do TreGuiObject(FGuiList.Items[i]).Destroy;
+  FGuiList.Destroy;
+  inherited Destroy;
+end;
+
+procedure TreGuiContainer.Render;
+var i: Integer;
+begin
+  if FVisible then for i := 0 to FGuiList.Count - 1 do
+  TreGuiObject(FGuiList.Items[i]).Render;
+end;
+
+procedure TreGuiContainer.Update;
+var i: Integer;
+begin
+  for i := 0 to FGuiList.Count - 1 do TreGuiObject(FGuiList.Items[i]).Update;
 end;
 
 end.

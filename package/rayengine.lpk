@@ -24,7 +24,7 @@
       </Item>
       <Item>
         <Filename Value="..\source\regui.pas"/>
-        <UnitName Value="regui"/>
+        <UnitName Value="reGui"/>
       </Item>
     </Files>
     <RequiredPkgs>
